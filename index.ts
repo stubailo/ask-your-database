@@ -33,6 +33,8 @@ const ConfigSchema = z.object({
 });
 
 async function main() {
+  console.log(process.argv);
+
   const options = commandLineArgs([
     { name: "config", type: String, defaultOption: true },
   ]);
