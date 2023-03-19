@@ -57,9 +57,9 @@ Then you can put in a question, for example:
 If the response includes a SQL query, then this tool will automatically run it for you and show the results:
 
 ```
-To answer your question, we'll need to join the 'name' table to find Keanu Reeves' person_id, and
-then join the 'cast_info' table to get the movie_ids in which Keanu Reeves appeared as an actor, and
-finally join the 'title' table to get the titles of those movies.
+To answer your question, we'll need to join the 'name' table to find Keanu Reeves' person_id,
+and then join the 'cast_info' table to get the movie_ids in which Keanu Reeves appeared as an
+actor, and finally join the 'title' table to get the titles of those movies.
 
 Please run the following query:
 
@@ -100,9 +100,9 @@ movies, and also sort to show the most recent first?
 Using the new results and the past context, GPT will then run more queries and improve its results:
 
 ```
-To filter only movies and sort them by the most recent first, we need to join the 'kind_type' table
-to get the movie kind and filter by 'movie', and order the result by 'production_year' in descending
-order. Please run the following query:
+To filter only movies and sort them by the most recent first, we need to join the 'kind_type'
+table to get the movie kind and filter by 'movie', and order the result by 'production_year'
+in descending order. Please run the following query:
 
 SELECT title.title, title.production_year
 FROM name
