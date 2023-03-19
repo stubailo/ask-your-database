@@ -46,3 +46,7 @@ Using pnpm or your Node package manager of choice:
 pnpm install
 pnpm start yourConfig.json
 ```
+
+## Additional disclaimers
+
+Note that your database schema and any data queried by GPT will be sent to OpenAI for processing in the cloud. Exercise the appropriate amount of caution depending on your data.
