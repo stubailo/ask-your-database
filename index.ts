@@ -5,11 +5,17 @@
 import * as dotenv from "dotenv"; // see https://github.com/motdotla/dotenv#how-do-i-use-dotenv-with-import
 dotenv.config();
 
-import { ChatCompletionRequestMessage, Configuration, OpenAIApi } from "openai";
+import {
+  ChatCompletionRequestMessage,
+  Configuration,
+  CreateChatCompletionResponse,
+  OpenAIApi,
+} from "openai";
 import knex from "knex";
 import { knexSnakeCaseMappers } from "objection";
 import { groupBy } from "lodash";
 import inquirer from "inquirer";
+import { AxiosResponse } from "axios";
 
 async function main() {
   const db = await createDb();
@@ -55,26 +61,11 @@ ${columnStrings.join(",\n")}
   });
   const openai = new OpenAIApi(configuration);
 
-  console.log(
-    `SYSTEM: You are a helpful assistant that writes SQL queries in order to answer questions about a database.
-`
-  );
-  console.log(`USER:
-
-I'd like to work with you to answer a question I have. I can
-run several queries to get the answer, and tell you the results along the way.
-The question I have is:`);
-
   const { initialQuestion } = await inquirer.prompt({
     type: "input",
     name: "initialQuestion",
     message: "What is the initial question?",
   });
-
-  console.log(`USER: ${initialQuestion}
-  
-What is the first query I should run, and why? I'd like to use the fewest queries possible, so use
-joins where you can.`);
 
   let messages: ChatCompletionRequestMessage[] = [
     {
@@ -87,37 +78,53 @@ joins where you can.`);
 
 ${schemaString}
 
-I'd like to work with you to answer a question I have. I can
-run several queries to get the answer, and tell you the results along the way.
+I'd like to work with you to answer a question I have. I can run several queries to get the answer, and tell you the results along the way.
+I'd like to use the fewest queries possible, so use joins where you can. If you're not sure what to do, you can ask me questions about the database
+or run intermediate queries learn more about the data.
+
 The question I have is:
 
-"${initialQuestion}"
-
-What is the first query I should run, and why? I'd like to use the fewest queries possible, so use
-joins where you can.`,
+"${initialQuestion}"`,
     },
   ];
 
   while (true) {
     console.log("Calling GPT...");
-    console.time("completion");
-    let response;
-    try {
-      response = await openai.createChatCompletion({
-        model: "gpt-4",
-        messages: messages,
-      });
-    } catch (e: any) {
-      console.log(e.message);
+
+    let response: AxiosResponse<CreateChatCompletionResponse, any> | undefined;
+
+    // Call the API. If there is an error, try up to 3 times.
+    let numTries = 0;
+    while (numTries < 3) {
+      console.time("completion");
+      try {
+        response = (await openai.createChatCompletion({
+          model: "gpt-4",
+          messages: messages,
+        })) as AxiosResponse<CreateChatCompletionResponse, any>;
+      } catch (error: any) {
+        console.log("ERROR", error.message);
+        numTries++;
+        if (numTries < 3) {
+          console.log("Retrying...");
+        } else {
+          console.log("Giving up.");
+          process.exit(1);
+        }
+
+        continue;
+      }
       break;
     }
     console.timeEnd("completion");
 
-    console.log(response.data.usage);
+    console.log(response!.data.usage);
 
     const responseContent = response!.data!.choices[0]!.message!.content;
 
-    console.log(`ASSISTANT:
+    console.log(`
+
+ASSISTANT:
     
 ${responseContent}
 `);
@@ -132,25 +139,48 @@ ${responseContent}
     let resultString = "";
     // Run all of the queries and print the first few rows of each in a nice table
     for (const query of queries) {
-      const result = await db.raw(query);
+      try {
+        const result = await db.raw(query).timeout(10000);
 
-      console.log(`────────────────────────────────
-The following result will be appended to your next message:
-${query}`);
-      console.table(result.rows.slice(0, 5));
+        // Get the first 100 values
+        const rows: Record<string, any>[] = [];
 
-      resultString += `
-Result for \`${query}\`:
+        let numValues = 0;
+        for (const row of result.rows) {
+          rows.push(row);
 
-${JSON.stringify(result.rows.slice(0, 5), null, 2)}
+          numValues += Object.values(row).length;
+
+          if (numValues > 100) {
+            break;
+          }
+        }
+
+        console.table(rows);
+
+        resultString += `
+
+        
+I ran \`${query}\` and it returned ${
+          result.rows.length
+        } rows. Here are the first few rows:
+
+${JSON.stringify(rows, null, 2)}
 
 `;
+      } catch (e: any) {
+        console.table({ error: `Error: ${e.message}` });
+        resultString += `
+Result for \`${query}\` was an error: ${e.message}
+`;
+      }
     }
 
     const { nextMessage } = await inquirer.prompt({
       type: "input",
       name: "nextMessage",
-      message: "How would you like to respond? (q to quit)",
+      message:
+        "How would you like to respond? Any query results will be automatically sent with your response. (q to quit)",
     });
 
     if (nextMessage === "q") {
@@ -176,17 +206,15 @@ ${JSON.stringify(result.rows.slice(0, 5), null, 2)}
 main();
 
 async function createDb() {
-  let dbConfig = {
-    user: "imdb",
-    host: "localhost",
-    database: "imdb",
-    password: "1234",
-    port: 5432,
-  };
-
   const db = knex({
     client: "pg",
-    connection: dbConfig,
+    connection: {
+      user: "imdb",
+      host: "localhost",
+      database: "imdb",
+      password: "1234",
+      port: 5432,
+    },
     pool: {
       min: 1,
       max: 32,
