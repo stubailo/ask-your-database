@@ -14,6 +14,7 @@ specifiers:
   pg: ^8.10.0
   ts-node: ^10.9.1
   typescript: ^5.0.2
+  zod: ^3.21.4
 
 dependencies:
   '@types/inquirer': 9.0.3
@@ -24,6 +25,7 @@ dependencies:
   objection: 3.0.1_knex@2.4.2
   openai: 3.2.1
   pg: 8.10.0
+  zod: 3.21.4
 
 devDependencies:
   '@types/lodash': 4.14.191
@@ -873,3 +875,7 @@ packages:
     resolution: {integrity: sha512-Ux4ygGWsu2c7isFWe8Yu1YluJmqVhxqK2cLXNQA5AcC3QfbGNpM7fu0Y8b/z16pXLnFxZYvWhd3fhBY9DLmC6Q==}
     engines: {node: '>=6'}
     dev: true
+
+  /zod/3.21.4:
+    resolution: {integrity: sha512-m46AKbrzKVzOzs/DZgVnG5H55N1sv1M8qZU3A8RIKbs3mrACDNeIOeilDymVb2HdmP8uwshOCF4uJ8uM9rCqJw==}
+    dev: false

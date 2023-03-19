@@ -1,0 +1,11 @@
+{
+  "openAIAPIKey": "xxx",
+  "openAIModel": "xxx",
+  "postgresConnection": {
+    "host": "localhost",
+    "port": 5432,
+    "database": "imdb",
+    "user": "imdb",
+    "password": "1234"
+  }
+}

@@ -2,9 +2,6 @@
 // * OpenAI node SDK: https://github.com/openai/openai-node
 // * Models overview: https://platform.openai.com/docs/models/overview
 
-import * as dotenv from "dotenv"; // see https://github.com/motdotla/dotenv#how-do-i-use-dotenv-with-import
-dotenv.config();
-
 import {
   ChatCompletionRequestMessage,
   Configuration,
@@ -16,9 +13,37 @@ import { knexSnakeCaseMappers } from "objection";
 import { groupBy } from "lodash";
 import inquirer from "inquirer";
 import { AxiosResponse } from "axios";
+import { z } from "zod";
+import fs from "fs";
+
+// Schema for above
+const ConfigSchema = z.object({
+  openAIAPIKey: z.string(),
+  openAIModel: z.string(),
+  postgresConnection: z.object({
+    host: z.string(),
+    port: z.number(),
+    database: z.string(),
+    user: z.string(),
+    password: z.string(),
+  }),
+});
 
 async function main() {
-  const db = await createDb();
+  // Accept an argument with a path to a config file. It will be the
+  // last argument
+  const configPath = process.argv[process.argv.length - 1];
+
+  if (!configPath) {
+    console.log("Please provide a path to a config file");
+    process.exit(1);
+  }
+
+  const config = ConfigSchema.parse(
+    JSON.parse(fs.readFileSync(configPath, "utf-8"))
+  );
+
+  const db = await createDb(config);
 
   // First, print out the schema in a convenient format
   const schema = await db.raw(`
@@ -40,13 +65,22 @@ async function main() {
   // Group by table_name
   const tables = groupBy(schema.rows, "table_name");
 
+  // For each table name, run a query to get an example row
+
+  // This will be an object that maps the table name to the example row
+  const exampleRows: Record<string, any> = {};
+  for (const tableName of Object.keys(tables)) {
+    const exampleRow = await db(tableName).first();
+    exampleRows[tableName] = exampleRow;
+  }
+
   // Make a nice string for each table
   const tableStrings = Object.entries(tables).map(([tableName, columns]) => {
     const columnStrings = columns.map(
       (column) =>
         `  ${column.column_name} ${column.data_type} ${
           column.is_nullable === "YES" ? "NULL" : "NOT NULL"
-        }`
+        }; Example: ${exampleRows[tableName][column.column_name]}`
     );
     return `CREATE TABLE ${tableName} (
 ${columnStrings.join(",\n")}
@@ -57,15 +91,28 @@ ${columnStrings.join(",\n")}
   const schemaString = tableStrings.join("\n\n");
 
   const configuration = new Configuration({
-    apiKey: process.env.OPENAI_KEY,
+    apiKey: config.openAIAPIKey,
   });
   const openai = new OpenAIApi(configuration);
+
+  // Print out some introductory info like the name of the database and the names of the tables in the schema.
+  console.log(`You are connected to the database ${
+    config.postgresConnection.database
+  }. It has the following tables:
+
+${Object.keys(tables).join(", ")}
+`);
 
   const { initialQuestion } = await inquirer.prompt({
     type: "input",
     name: "initialQuestion",
-    message: "What is the initial question?",
+    message:
+      "Ask me a question about this database, and I'll try to answer! (q to quit)",
   });
+
+  if (initialQuestion === "q") {
+    process.exit(0);
+  }
 
   let messages: ChatCompletionRequestMessage[] = [
     {
@@ -80,7 +127,7 @@ ${schemaString}
 
 I'd like to work with you to answer a question I have. I can run several queries to get the answer, and tell you the results along the way.
 I'd like to use the fewest queries possible, so use joins where you can. If you're not sure what to do, you can ask me questions about the database
-or run intermediate queries learn more about the data.
+or run intermediate queries learn more about the data, but I can only run one query at a time.
 
 The question I have is:
 
@@ -90,18 +137,23 @@ The question I have is:
 
   while (true) {
     console.log("Calling GPT...");
+    const startTime = Date.now();
 
     let response: AxiosResponse<CreateChatCompletionResponse, any> | undefined;
 
     // Call the API. If there is an error, try up to 3 times.
     let numTries = 0;
     while (numTries < 3) {
-      console.time("completion");
       try {
-        response = (await openai.createChatCompletion({
-          model: "gpt-4",
-          messages: messages,
-        })) as AxiosResponse<CreateChatCompletionResponse, any>;
+        response = (await openai.createChatCompletion(
+          {
+            model: config.openAIModel,
+            messages: messages,
+          },
+          {
+            timeout: 20000,
+          }
+        )) as AxiosResponse<CreateChatCompletionResponse, any>;
       } catch (error: any) {
         console.log("ERROR", error.message);
         numTries++;
@@ -114,11 +166,16 @@ The question I have is:
 
         continue;
       }
+
       break;
     }
-    console.timeEnd("completion");
 
-    console.log(response!.data.usage);
+    const endTime = Date.now();
+    console.log(
+      `Took ${endTime - startTime} ms. Used ${
+        response!.data.usage!.total_tokens
+      } tokens so far.`
+    );
 
     const responseContent = response!.data!.choices[0]!.message!.content;
 
@@ -156,6 +213,9 @@ ${responseContent}
           }
         }
 
+        console.log(
+          `Returned ${result.rows.length} rows. Here are the first ${rows.length} rows:`
+        );
         console.table(rows);
 
         resultString += `
@@ -205,15 +265,15 @@ Result for \`${query}\` was an error: ${e.message}
 
 main();
 
-async function createDb() {
+async function createDb(config: z.infer<typeof ConfigSchema>) {
   const db = knex({
     client: "pg",
     connection: {
-      user: "imdb",
-      host: "localhost",
-      database: "imdb",
-      password: "1234",
-      port: 5432,
+      user: config.postgresConnection.user,
+      host: config.postgresConnection.host,
+      database: config.postgresConnection.database,
+      password: config.postgresConnection.password,
+      port: config.postgresConnection.port,
     },
     pool: {
       min: 1,
