@@ -1,12 +1,12 @@
 {
   "name": "ask-your-database",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "author": "Sashko Stubailo",
   "license": "MIT",
-  "bin": "./dist/index.js",
+  "bin": "./dist/bin.js",
   "scripts": {
     "start": "ts-node --logError index.ts",
-    "build": "tsc"
+    "build": "tsc && cp ./bin.js ./dist/bin.js"
   },
   "devDependencies": {
     "@types/inquirer": "^9.0.3",
