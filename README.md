@@ -1,6 +1,6 @@
 # Query your database with GPT
 
-A CLI tool that will let you ask GPT questions about any Postgres database. Just provide your connection details, and ask-your-database automatically loads up the schema, example data, and runs queries for you. It works best with GPT-4.
+A CLI tool that will let you ask GPT questions about any Postgres database. Just provide your connection details, and ask-your-database automatically loads up the schema, gets example data, and runs queries for you. It works best with GPT-4.
 
 > Note: This will directly run queries provided by GPT on the database that you provide. Unless it's a read-only connection, that means it might delete or update data by accident. Please use with caution and always keep backups of your data.
 
