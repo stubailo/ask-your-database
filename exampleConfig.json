@@ -1,6 +1,8 @@
 {
   "openAIAPIKey": "xxx",
   "openAIModel": "xxx",
+  "dbTimeoutMs": 20000,
+  "apiTimeoutMs": 30000,
   "postgresConnection": {
     "host": "localhost",
     "port": 5432,

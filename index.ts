@@ -20,6 +20,8 @@ import fs from "fs";
 const ConfigSchema = z.object({
   openAIAPIKey: z.string(),
   openAIModel: z.string(),
+  dbTimeoutMs: z.number(),
+  apiTimeoutMs: z.number(),
   postgresConnection: z.object({
     host: z.string(),
     port: z.number(),
@@ -151,7 +153,7 @@ The question I have is:
             messages: messages,
           },
           {
-            timeout: 20000,
+            timeout: config.apiTimeoutMs,
           }
         )) as AxiosResponse<CreateChatCompletionResponse, any>;
       } catch (error: any) {
@@ -197,7 +199,7 @@ ${responseContent}
     // Run all of the queries and print the first few rows of each in a nice table
     for (const query of queries) {
       try {
-        const result = await db.raw(query).timeout(10000);
+        const result = await db.raw(query).timeout(config.dbTimeoutMs);
 
         // Get the first 100 values
         const rows: Record<string, any>[] = [];
