@@ -15,7 +15,7 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "incremental": true,
-    "module": "nodenext",
+    "module": "commonjs",
     "target": "es2020",
     "lib": ["es2020"],
     "noEmit": false,

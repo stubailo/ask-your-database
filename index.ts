@@ -15,6 +15,7 @@ import inquirer from "inquirer";
 import { AxiosResponse } from "axios";
 import { z } from "zod";
 import fs from "fs";
+import commandLineArgs from "command-line-args";
 
 // Schema for above
 const ConfigSchema = z.object({
@@ -32,9 +33,11 @@ const ConfigSchema = z.object({
 });
 
 async function main() {
-  // Accept an argument with a path to a config file. It will be the
-  // last argument
-  const configPath = process.argv[process.argv.length - 1];
+  const options = commandLineArgs([
+    { name: "config", type: String, defaultOption: true },
+  ]);
+
+  const configPath = options.config;
 
   if (!configPath) {
     console.log("Please provide a path to a config file");
