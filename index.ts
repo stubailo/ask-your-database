@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 // Helpful links
 // * OpenAI node SDK: https://github.com/openai/openai-node
 // * Models overview: https://platform.openai.com/docs/models/overview
