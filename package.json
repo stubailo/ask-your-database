@@ -1,6 +1,6 @@
 {
   "name": "ask-your-database",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "author": "Sashko Stubailo",
   "license": "MIT",
   "bin": "./dist/bin.js",

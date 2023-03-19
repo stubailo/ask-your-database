@@ -27,12 +27,12 @@ First, create a JSON configuration file:
 Then, call this with the config file like so:
 
 ```sh
-TODO
+npx ask-your-database myConfig.json
 ```
 
 ## What it does
 
-TODO
+First, this will tell you a bit about your database, and prompt you for an initial question:
 
 ## Demo
 
