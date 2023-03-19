@@ -41,7 +41,9 @@ First, this will tell you a bit about your database, and prompt you for an initi
 
 You are connected to the database imdb. It has the following tables:
 
-aka_name, aka_title, cast_info, char_name, comp_cast_type, company_name, company_type, complete_cast, info_type, keyword, kind_type, link_type, movie_companies, movie_info, movie_info_idx, movie_keyword, movie_link, name, person_info, role_type, title
+aka_name, aka_title, cast_info, char_name, comp_cast_type, company_name, company_type,
+complete_cast, info_type, keyword, kind_type, link_type, movie_companies, movie_info,
+movie_info_idx, movie_keyword, movie_link, name, person_info, role_type, title
 
 ? Ask me a question about this database, and I'll try to answer! (q to quit)
 ```
@@ -55,7 +57,9 @@ Then you can put in a question, for example:
 If the response includes a SQL query, then this tool will automatically run it for you and show the results:
 
 ```
-To answer your question, we'll need to join the 'name' table to find Keanu Reeves' person_id, and then join the 'cast_info' table to get the movie_ids in which Keanu Reeves appeared as an actor, and finally join the 'title' table to get the titles of those movies.
+To answer your question, we'll need to join the 'name' table to find Keanu Reeves' person_id, and
+then join the 'cast_info' table to get the movie_ids in which Keanu Reeves appeared as an actor, and
+finally join the 'title' table to get the titles of those movies.
 
 Please run the following query:
 
@@ -96,7 +100,9 @@ movies, and also sort to show the most recent first?
 Using the new results and the past context, GPT will then run more queries and improve its results:
 
 ```
-To filter only movies and sort them by the most recent first, we need to join the 'kind_type' table to get the movie kind and filter by 'movie', and order the result by 'production_year' in descending order. Please run the following query:
+To filter only movies and sort them by the most recent first, we need to join the 'kind_type' table
+to get the movie kind and filter by 'movie', and order the result by 'production_year' in descending
+order. Please run the following query:
 
 SELECT title.title, title.production_year
 FROM name
@@ -134,10 +140,10 @@ Then, you can continue to refine the results:
 
 The response:
 
-````
-To omit the ones with null production_year, add a condition in the WHERE clause. Please run the following query:
+```
+To omit the ones with null production_year, add a condition in the WHERE clause. Please run the
+following query:
 
-```sql
 SELECT title.title, title.production_year
 FROM name
 JOIN cast_info ON name.id = cast_info.person_id
@@ -146,7 +152,6 @@ JOIN role_type ON cast_info.role_id = role_type.id
 JOIN kind_type ON title.kind_id = kind_type.id
 WHERE name.name ILIKE 'Reeves, Keanu' AND role_type.role = 'actor' AND kind_type.kind = 'movie' AND title.production_year IS NOT NULL
 ORDER BY title.production_year DESC;
-````
 
 Returned 60 rows. Here are the first 51 rows:
 ┌─────────┬─────────────────────────────────────┬─────────────────┐
@@ -165,15 +170,18 @@ Returned 60 rows. Here are the first 51 rows:
 
 ... some results truncated
 
-````
+```
 
 And so on!
 
-## Demo video
-
-TODO
-
 ## Approach
+
+This combines a few simple things together:
+
+1. First, it queries the database for all of the tables. For each table it gets all the columns, their types, and one example result. All of these are provided as the beginning of the prompt.
+2. The schema and your question are sent to GPT.
+3. Any queries returned as part of the response are automatically executed, and the result is printed to you.
+4. When you send any followup questions, the result is automatically sent so GPT can use it as context for the following responses.
 
 ## Local development
 
@@ -182,7 +190,7 @@ Using pnpm or your Node package manager of choice:
 ```sh
 pnpm install
 pnpm start yourConfig.json
-````
+```
 
 ## Additional disclaimers
 
